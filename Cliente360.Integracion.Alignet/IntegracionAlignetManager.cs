@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using Newtonsoft.Json;
 using System.Configuration;
-using Cliente360.Integracion.Notificacion;
+//using Cliente360.Integracion.Notificacion;
 
 namespace Cliente360.Integracion.Alignet
 {
@@ -19,10 +19,10 @@ namespace Cliente360.Integracion.Alignet
     {
         private static readonly log4net.ILog _logger = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private static string csAlignet;
-        private readonly string APICREATEMAIL = ConfigurationManager.AppSettings["APICREATEMAIL"];
-        private readonly string APICONSULTA = ConfigurationManager.AppSettings["APICONSULTA"];
 
-        private readonly string APIREVERSE = ConfigurationManager.AppSettings["APIREVERSE"];
+        private readonly string APICONSULTA_ALIGNET = ConfigurationManager.AppSettings["APICONSULTA_ALIGNET"];
+
+        private readonly string APIREVERSE_ALIGNET = ConfigurationManager.AppSettings["APIREVERSE_ALIGNET"];
 
         private readonly string IDACQUIRER = ConfigurationManager.AppSettings["IDACQUIRER"];
         private readonly string IDCOMMERCE = ConfigurationManager.AppSettings["IDCOMMERCE"];
@@ -30,27 +30,22 @@ namespace Cliente360.Integracion.Alignet
         private readonly string AUTHORIZATION_CONSULTA = ConfigurationManager.AppSettings["AUTHORIZATION_CONSULTA"];
         private readonly string AUTHORIZATION_EXTORNO = ConfigurationManager.AppSettings["AUTHORIZATION_EXTORNO"];
 
-        private static readonly string CUSTOMERKEY = ConfigurationManager.AppSettings["CUSTOMERKEY"];
-        private static readonly string IDCOMMERCEMAIL = ConfigurationManager.AppSettings["IDCOMMERCEMAIL"];
         //System.Configuration.ConfigurationManager
-        private static readonly string CODEST_PENDIENTEEXTORNO =  ConfigurationManager.AppSettings["CODEST_PENDIENTEEXTORNO"]; //3
-        private static readonly string CODERROR_EXCEPCION =  ConfigurationManager.AppSettings["CODERROR_EXCEPCION"]; //4
-        private static readonly string CODERROR_ALIGNET =  ConfigurationManager.AppSettings["CODERROR_ALIGNET"]; //5
-        private static readonly string CODEST_OKALIGNET =  ConfigurationManager.AppSettings["CODEST_OKALIGNET"]; //9
+        private static readonly string CODEST_AUTORIZADO =  ConfigurationManager.AppSettings["CODEST_AUTORIZADO"]; //0
+        private static readonly string CODERROR_EXCEPCION =  ConfigurationManager.AppSettings["CODERROR_EXCEPCION"]; //21
+        private static readonly string CODERROR_ALIGNET =  ConfigurationManager.AppSettings["CODERROR_ALIGNET"]; //22
+        private static readonly string CODEST_OKEXTORNADO =  ConfigurationManager.AppSettings["CODEST_OKEXTORNADO"]; //2
 
-        private static readonly string DIAS_PROCESO_EXTORNO = ConfigurationManager.AppSettings["DIAS_PROCESO_EXTORNO"]; //4
+        private static readonly string DIAS_PROCESO_EXTORNO = ConfigurationManager.AppSettings["DIAS_PROCESO_EXTORNO"]; 
 
-        private static readonly string cadenaConexion = ConfigurationManager.ConnectionStrings["connectionString"].ConnectionString;
+        //private static readonly string cadenaConexion = ConfigurationManager.ConnectionStrings["connectionString"].ConnectionString;
+        private static readonly string cadenaConexion = ConfigurationManager.ConnectionStrings["connectionStringDesa"].ConnectionString;
 
-        private static readonly string COD_RESULT_LIQUIDADO = "7";
-        private static readonly string COD_RESULT_EXTORNADO = "8";
-        private static readonly string ESTADO_EXTORNADO = "Extornado";
-        private static readonly string ESTADO_LIQUIDADO = "Liquidado";
+        private static readonly string COD_RESULT_LIQUIDADO = ConfigurationManager.AppSettings["COD_RESULT_LIQUIDADO"]; //"7";
+        private static readonly string COD_RESULT_EXTORNADO = ConfigurationManager.AppSettings["COD_RESULT_EXTORNADO"]; //"8";
+        private static readonly string ESTADO_EXTORNADO = ConfigurationManager.AppSettings["ESTADO_EXTORNADO"]; //"Extornado";
         //private static readonly string VALIDAR_EXTORNO_REALIZADO = ConfigurationManager.AppSettings["VALIDAR_EXTORNO_REALIZADO"];  
 
-        //result
-
-        public static HttpClient ApiClient { get; set; } 
 
         public IntegracionAlignetManager(string csalignet)
         {
@@ -58,22 +53,17 @@ namespace Cliente360.Integracion.Alignet
         }
         public void Start()
         {
-            //ApiClient = new HttpClient();
-            //ApiClient.DefaultRequestHeaders.Accept.Clear();
 
             Newtonsoft.Json.Linq.JObject objreversa;
-            string[] estados = { CODEST_PENDIENTEEXTORNO, CODERROR_EXCEPCION, CODERROR_ALIGNET };
-            var notification = new NotificationManager(cadenaConexion);
+            string[] estados = { CODEST_AUTORIZADO, CODERROR_EXCEPCION, CODERROR_ALIGNET };
+            //var notification = new NotificationManager(cadenaConexion);
             try
             {
-                _logger.Info("Inicio del procesamiento API alignet...");
-                var transacciones_alignet = ObtenerTransaccionesAlignet(estados);
+                _logger.Info("Inicio del procesamiento #2 Extorno.");
+                var transacciones_alignet = ObtenerTransaccionesParaExtornar(estados);
 
                 foreach (base_transacciones el in transacciones_alignet)
                 {
-                    //Console.WriteLine(el.EMAIL);
-                    // if TIMEOUT Consultar() 
-                    //
                     string _result=null;
 
                     _result = REVERSE_ALIGNET(el.NUMERO_PEDIDO);
@@ -86,11 +76,7 @@ namespace Cliente360.Integracion.Alignet
                         if (value.ToString() == "true")
                         {
                             //Console.WriteLine(" el.NUMERO_PEDIDO :" + el.NUMERO_PEDIDO + " Extornado");
-                            ActualizarTransaccionesAlignet(el.ID, CODEST_OKALIGNET, ESTADO_EXTORNADO);
-                            Notificacion.Entities.NotificationBase notificacionBase = new Notificacion.Entities.NotificationBase();
-                            notificacionBase = getNotificacionBase(el.ID.ToString(), el.NUMERO_ORDEN, el.NOMBRE_TITULAR, el.NUMERO_TARJETA, string.Format("{0:dd-MM-yyyy}", el.FECHA_PEDIDO), el.IMPORTE_PEDIDO, ESTADO_EXTORNADO, el.CODIGO_AUTORIZACION, el.BANCO, el.MEDIO_PAGO, el.EMAIL);
-                            notification.SaveData(notificacionBase);
-
+                            ActualizarTransaccionesAlignet(el.ID, CODEST_OKEXTORNADO, ESTADO_EXTORNADO);
                         }
                         else
                         {
@@ -98,11 +84,8 @@ namespace Cliente360.Integracion.Alignet
 
                             if (_estado == COD_RESULT_EXTORNADO || _estado == COD_RESULT_LIQUIDADO)
                             {
-                                if (_estado == COD_RESULT_EXTORNADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKALIGNET, ESTADO_EXTORNADO);
-                                if (_estado == COD_RESULT_LIQUIDADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKALIGNET, ESTADO_LIQUIDADO);
-                                Notificacion.Entities.NotificationBase notificacionBase = new Notificacion.Entities.NotificationBase();
-                                notificacionBase = getNotificacionBase(el.ID.ToString(), el.NUMERO_ORDEN, el.NOMBRE_TITULAR, el.NUMERO_TARJETA, string.Format("{0:dd-MM-yyyy}", el.FECHA_PEDIDO), el.IMPORTE_PEDIDO, ESTADO_EXTORNADO, el.CODIGO_AUTORIZACION, el.BANCO, el.MEDIO_PAGO, el.EMAIL);
-                                notification.SaveData(notificacionBase);
+                                if (_estado == COD_RESULT_EXTORNADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKEXTORNADO, ESTADO_EXTORNADO);
+                                //if (_estado == COD_RESULT_LIQUIDADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKALIGNET, ESTADO_LIQUIDADO);
                             }
                             else
                             {
@@ -117,7 +100,7 @@ namespace Cliente360.Integracion.Alignet
                     }
                }
 
-                _logger.Info("Fin del procesamiento API alignet...");
+                _logger.Info("Fin del procesamiento #2 Extorno.");
             }
             catch (Exception ex )
             {
@@ -125,7 +108,7 @@ namespace Cliente360.Integracion.Alignet
             }
         }
 
-        private List<base_transacciones> ObtenerTransaccionesAlignet(string[] estado)
+        private List<base_transacciones> ObtenerTransaccionesParaExtornar(string[] estado)
         {
             _logger.Info("Inicio de la carga de transacciones alignet...");
             string sql = "Select * from base_transacciones_alignet where ESTADO_OPERACION in ('" + String.Join("','", estado) + "') AND  convert(datetime, dateadd(d, -" + DIAS_PROCESO_EXTORNO + ", GETDATE()), 103) <= convert(datetime, FECHA_PEDIDO, 103) ";
@@ -133,14 +116,12 @@ namespace Cliente360.Integracion.Alignet
             _logger.Info(string.Format("Se obtuvieron {0} transacciones...", transacciones.Count));
             return transacciones;
         }
-
         public void ActualizarTransaccionesAlignet(long id,string estado_operacion,string estado_transaccion)
         {
             _logger.Info("Actualiza carga de transacciones alignet...");
             string sql = "UPDATE base_transacciones_alignet SET ESTADO_OPERACION = '"+ estado_operacion + "',ESTADO_TRANSACCION = '" + estado_transaccion + "', FECHA_OPERACION = GetDate() WHERE ID = '" + id.ToString() + "'";  
             UpdateData(sql, CommandType.Text);
         }
-
         public List<base_transacciones> GetData(string sqlText, CommandType commandType = CommandType.StoredProcedure)
         {
             var dbcon = new SqlConnection(csAlignet);
@@ -150,7 +131,6 @@ namespace Cliente360.Integracion.Alignet
                 return dt.ToList();
             }
         }
-
         public void UpdateData(string sqlText, CommandType commandType = CommandType.StoredProcedure)
         {
             var dbcon = new SqlConnection(csAlignet);
@@ -158,79 +138,6 @@ namespace Cliente360.Integracion.Alignet
             {
                 dSqlServer.ExecuteNonQuery(sqlText, commandType);
             }
-        }
-
-        async static void SendMailByApi(string urlApi, StringContent xmlDoc)
-        {
-            using (HttpClient apiclient = new HttpClient())
-            {
-                using (HttpResponseMessage response = await apiclient.PostAsync(urlApi, xmlDoc))
-                {
-                    using (HttpContent content = response.Content) 
-                    {
-                        Console.WriteLine(content.ToString());
-                    }
-                }            
-            }
-        }
-
-        private Notificacion.Entities.NotificationBase getNotificacionBase(string identificador1,string identificador2,string nombre,string tarjeta,string fechacompra,string importe, string estado, string codigoautorizacion,string banco, string marca,string email)
-        {
-            var variables = new Dictionary<string, string>();
-            variables.Add("NombreTitular", nombre);
-            variables.Add("Tarjeta", tarjeta);
-            variables.Add("FechaCompra", fechacompra);
-            variables.Add("Importe", importe);
-            variables.Add("Estado", estado);
-            variables.Add("CodigoAutorizacion", codigoautorizacion);
-            variables.Add("Banco", banco);
-            variables.Add("Marca", marca);
-            variables.Add("EMAIL", email);
-
-            var data = Newtonsoft.Json.JsonConvert.SerializeObject(variables);
-
-            var notificationBase = new Notificacion.Entities.NotificationBase()
-            {
-                ID_NOTIFICATION_TYPE = (int)NotificationType.EMAIL,
-                IDENTIFIER_1 = identificador1,
-                IDENTIFIER_2 = identificador2,
-                DATA = data,
-                CONTACT_INPUT = email,
-                TEMPLATE = CUSTOMERKEY,
-            };
-
-            return notificationBase;
-        }
-        private StringContent getXmlDoc(string nombre, string tarjeta, string fechacompra, string importe, string estado, string codigoautorizacion, string banco, string marca, string email)
-        {
-
-            string data = @"<?xml version=""1.0"" encoding=""UTF-8""?><soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns:cli=""http://mdwcorp.falabella.com/common/schema/clientservice"" xmlns:tns=""http://mdwcorp.falabella.com/OSB/schema/CORP/CORP/Email/Create/Req-v2014.4"" xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance""><soapenv:Header><cli:ClientService><cli:country>PE</cli:country><cli:commerce>Falabella</cli:commerce><cli:channel>Web</cli:channel></cli:ClientService></soapenv:Header><soapenv:Body><tns:emailManagementCreateRequestExp><tns:Objects xsi:type=""TriggeredSend"">" +
-                          "<tns:TriggeredSendDefinition><tns:CustomerKey>%%CUSTOMERKEY%%</tns:CustomerKey></tns:TriggeredSendDefinition><tns:Subscribers>" +
-                          "<tns:Attributes><tns:Name>NombreTitular</tns:Name><tns:Value>%%NOMBRE%%</tns:Value></tns:Attributes>" +
-                          "<tns:Attributes><tns:Name>Tarjeta</tns:Name><tns:Value>%%TARJETA%%</tns:Value></tns:Attributes>" +
-                          "<tns:Attributes><tns:Name>FechaCompra</tns:Name><tns:Value>%%FECHACOMPRA%%</tns:Value></tns:Attributes>" +
-                          "<tns:Attributes><tns:Name>Importe</tns:Name><tns:Value>%%IMPORTE%%</tns:Value></tns:Attributes>" +
-                          "<tns:Attributes><tns:Name>Estado</tns:Name><tns:Value>%%ESTADO%%</tns:Value></tns:Attributes>" +
-                          "<tns:Attributes><tns:Name>CodigoAutorizacion</tns:Name><tns:Value>%%CODIGOAUTORIZACION%%</tns:Value></tns:Attributes>" +
-                          "<tns:Attributes><tns:Name>Banco</tns:Name><tns:Value>%%BANCO%%</tns:Value></tns:Attributes>" +
-                          "<tns:Attributes><tns:Name>Marca</tns:Name><tns:Value>%%MARCA%%</tns:Value></tns:Attributes>" +
-                          "<tns:EmailAddress>%%EMAIL%%</tns:EmailAddress>" +
-                          "<tns:SubscriberKey>%%EMAIL%%</tns:SubscriberKey></tns:Subscribers>" +
-                          "<tns:Client><tns:ID>%%IDCLIENTEMAIL%%</tns:ID></tns:Client></tns:Objects></tns:emailManagementCreateRequestExp></soapenv:Body></soapenv:Envelope>";
-
-            data = data.Replace("%%CUSTOMERKEY%%", CUSTOMERKEY);
-            data = data.Replace("%%IDCLIENTEMAIL%%", IDCOMMERCEMAIL);
-            data = data.Replace("%%NOMBRE%%", nombre);
-            data = data.Replace("%%TARJETA%%", tarjeta);
-            data = data.Replace("%%FECHACOMPRA%%", fechacompra);
-            data = data.Replace("%%IMPORTE%%", importe);
-            data = data.Replace("%%ESTADO%%", estado);
-            data = data.Replace("%%CODIGOAUTORIZACION%%", codigoautorizacion);
-            data = data.Replace("%%BANCO%%", banco);
-            data = data.Replace("%%MARCA%%", marca);
-            data = data.Replace("%%EMAIL%%", email);
-            StringContent xmlDocPost = new StringContent(data, Encoding.UTF8, "application/xml");
-            return xmlDocPost;
         }
         private string GET_RESULT_CONSULTA_ALIGNET(string operationNumber) 
         {
@@ -242,7 +149,7 @@ namespace Cliente360.Integracion.Alignet
             //Console.WriteLine(DATA);
             try
             {
-                System.Net.WebRequest wrequest = System.Net.WebRequest.Create(APICONSULTA);
+                System.Net.WebRequest wrequest = System.Net.WebRequest.Create(APICONSULTA_ALIGNET);
                 wrequest.ContentType = "application/json";
                 wrequest.Method = "POST";
                 using (var streamWriter = new System.IO.StreamWriter(wrequest.GetRequestStream()))
@@ -264,21 +171,19 @@ namespace Cliente360.Integracion.Alignet
         }
         private string REVERSE_ALIGNET(string operationNumber)
         {
-            //string TEXT = IDACQUIRER + IDCOMMERCE + operationNumber + AUTHORIZATION;
-            //string PURCHASEVERIFICATION = SHA512(TEXT);
             string DATA = ""; // "{\"idAcquirer\":\"" + IDACQUIRER + "\",\"idCommerce\":\"" + IDCOMMERCE + "\",\"operationNumber\":\"" + operationNumber + "\",\"purchaseVerification\":\"" + PURCHASEVERIFICATION + "\"}";
             string responseData = "";
             //Console.WriteLine(DATA);
             try
             {
-                System.Net.WebRequest wrequest = System.Net.WebRequest.Create(APIREVERSE+"/"+operationNumber);
+                System.Net.WebRequest wrequest = System.Net.WebRequest.Create(APIREVERSE_ALIGNET + "/"+operationNumber);
                 wrequest.ContentType = "application/json";
                 //wrequest.Headers.Add("Authorization", AUTHORIZATION);
                 wrequest.Headers["Authorization"]= AUTHORIZATION_EXTORNO;
                 wrequest.Method = "DELETE"; //DELETE
                 wrequest.Timeout = 100000;
-                Console.WriteLine(APIREVERSE + "/" + operationNumber);
-               
+                //Console.WriteLine(APIREVERSE_ALIGNET + "/" + operationNumber);
+
                 using (var streamWriter = new System.IO.StreamWriter(wrequest.GetRequestStream()))
                 {
                     streamWriter.Write(DATA);
@@ -287,7 +192,7 @@ namespace Cliente360.Integracion.Alignet
                 System.Net.WebResponse wresponse = wrequest.GetResponse();
                 System.IO.StreamReader responseStream = new System.IO.StreamReader(wresponse.GetResponseStream());
                 responseData = responseStream.ReadToEnd();
-                Console.WriteLine(responseData);
+                //Console.WriteLine(responseData);
             }
             catch (Exception ex)
             {
@@ -296,7 +201,6 @@ namespace Cliente360.Integracion.Alignet
 
             return responseData;
         }
-
         public static string SHA512(string input)
         {
             var bytes = System.Text.Encoding.UTF8.GetBytes(input);
