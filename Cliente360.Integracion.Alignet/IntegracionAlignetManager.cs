@@ -67,7 +67,7 @@ namespace Cliente360.Integracion.Alignet
                     string _result=null;
 
                     _result = REVERSE_ALIGNET(el.NUMERO_PEDIDO);
-
+                    Console.WriteLine(" _result :" + _result);
                     if (_result.Length > 0)
                     {
                         objreversa = Newtonsoft.Json.Linq.JObject.Parse(_result);
@@ -75,7 +75,7 @@ namespace Cliente360.Integracion.Alignet
                         //Console.WriteLine(value.ToString());
                         if (value.ToString() == "true")
                         {
-                            //Console.WriteLine(" el.NUMERO_PEDIDO :" + el.NUMERO_PEDIDO + " Extornado");
+                            Console.WriteLine(" el.NUMERO_PEDIDO :" + el.NUMERO_PEDIDO + " Extornado");
                             ActualizarTransaccionesAlignet(el.ID, CODEST_OKEXTORNADO, ESTADO_EXTORNADO);
                         }
                         else
@@ -84,6 +84,7 @@ namespace Cliente360.Integracion.Alignet
 
                             if (_estado == COD_RESULT_EXTORNADO || _estado == COD_RESULT_LIQUIDADO)
                             {
+                                Console.WriteLine(" el.NUMERO_PEDIDO :" + el.NUMERO_PEDIDO + " Extornado por Consulta");
                                 if (_estado == COD_RESULT_EXTORNADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKEXTORNADO, ESTADO_EXTORNADO);
                                 //if (_estado == COD_RESULT_LIQUIDADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKALIGNET, ESTADO_LIQUIDADO);
                             }
@@ -177,9 +178,9 @@ namespace Cliente360.Integracion.Alignet
             try
             {
                 System.Net.WebRequest wrequest = System.Net.WebRequest.Create(APIREVERSE_ALIGNET + "/"+operationNumber);
-                wrequest.ContentType = "application/json";
+                //wrequest.ContentType = "application/json";
                 //wrequest.Headers.Add("Authorization", AUTHORIZATION);
-                wrequest.Headers["Authorization"]= AUTHORIZATION_EXTORNO;
+                wrequest.Headers["Authorization"]= "Bearer "+AUTHORIZATION_EXTORNO;
                 wrequest.Method = "DELETE"; //DELETE
                 wrequest.Timeout = 100000;
                 //Console.WriteLine(APIREVERSE_ALIGNET + "/" + operationNumber);
