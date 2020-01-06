@@ -35,15 +35,18 @@ namespace Cliente360.Integracion.Alignet
         private static readonly string CODERROR_EXCEPCION =  ConfigurationManager.AppSettings["CODERROR_EXCEPCION"]; //21
         private static readonly string CODERROR_ALIGNET =  ConfigurationManager.AppSettings["CODERROR_ALIGNET"]; //22
         private static readonly string CODEST_OKEXTORNADO =  ConfigurationManager.AppSettings["CODEST_OKEXTORNADO"]; //2
+        private static readonly string CODEST_OKLIQUIDADO = ConfigurationManager.AppSettings["CODEST_OKLIQUIDADO"]; //3
+
 
         private static readonly string DIAS_PROCESO_EXTORNO = ConfigurationManager.AppSettings["DIAS_PROCESO_EXTORNO"]; 
 
-        //private static readonly string cadenaConexion = ConfigurationManager.ConnectionStrings["connectionString"].ConnectionString;
-        private static readonly string cadenaConexion = ConfigurationManager.ConnectionStrings["connectionStringDesa"].ConnectionString;
+        private static readonly string cadenaConexion = ConfigurationManager.ConnectionStrings["connectionString"].ConnectionString;
+        //private static readonly string cadenaConexion = ConfigurationManager.ConnectionStrings["connectionStringDesa"].ConnectionString;
 
         private static readonly string COD_RESULT_LIQUIDADO = ConfigurationManager.AppSettings["COD_RESULT_LIQUIDADO"]; //"7";
         private static readonly string COD_RESULT_EXTORNADO = ConfigurationManager.AppSettings["COD_RESULT_EXTORNADO"]; //"8";
         private static readonly string ESTADO_EXTORNADO = ConfigurationManager.AppSettings["ESTADO_EXTORNADO"]; //"Extornado";
+        private static readonly string ESTADO_LIQUIDADO = ConfigurationManager.AppSettings["ESTADO_LIQUIDADO"]; //"Liquidado";
         //private static readonly string VALIDAR_EXTORNO_REALIZADO = ConfigurationManager.AppSettings["VALIDAR_EXTORNO_REALIZADO"];  
 
 
@@ -67,7 +70,7 @@ namespace Cliente360.Integracion.Alignet
                     string _result=null;
 
                     _result = REVERSE_ALIGNET(el.NUMERO_PEDIDO);
-                    Console.WriteLine(" _result :" + _result);
+                    //Console.WriteLine(" _result :" + _result);
                     if (_result.Length > 0)
                     {
                         objreversa = Newtonsoft.Json.Linq.JObject.Parse(_result);
@@ -84,9 +87,9 @@ namespace Cliente360.Integracion.Alignet
 
                             if (_estado == COD_RESULT_EXTORNADO || _estado == COD_RESULT_LIQUIDADO)
                             {
-                                Console.WriteLine(" el.NUMERO_PEDIDO :" + el.NUMERO_PEDIDO + " Extornado por Consulta");
+                                Console.WriteLine(" el.NUMERO_PEDIDO :" + el.NUMERO_PEDIDO + _estado +" por Consulta");
                                 if (_estado == COD_RESULT_EXTORNADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKEXTORNADO, ESTADO_EXTORNADO);
-                                //if (_estado == COD_RESULT_LIQUIDADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKALIGNET, ESTADO_LIQUIDADO);
+                                if (_estado == COD_RESULT_LIQUIDADO) ActualizarTransaccionesAlignet(el.ID, CODEST_OKLIQUIDADO, ESTADO_LIQUIDADO);
                             }
                             else
                             {
